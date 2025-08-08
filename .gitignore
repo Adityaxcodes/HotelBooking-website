@@ -1,6 +1,9 @@
 # Dependencies
 node_modules
 
+# CLIENT folder (deployed separately)
+CLIENT/
+
 # Environment variables
 .env
 .env.local

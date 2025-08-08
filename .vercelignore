@@ -1,7 +1,8 @@
-# Ignore everything except api folder
+# Ignore everything except essential API files
+CLIENT/
+SERVER/
 *
-!api/
-!api/**
+!index.js
 !vercel.json
 !package.json
 !.nvmrc

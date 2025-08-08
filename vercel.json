@@ -1,5 +1,8 @@
 {
     "version": 2,
+    "build": {
+        "command": "echo 'API deployment - no build needed'"
+    },
     "builds": [
         {
             "src": "index.js",
