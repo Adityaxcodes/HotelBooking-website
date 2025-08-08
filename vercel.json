@@ -16,6 +16,19 @@
         }
     ],
     "env": {
-        "VITE_BACKEND_URL": "https://your-server-vercel-url.vercel.app"
+        "VITE_BACKEND_URL": "https://your-server-vercel-url.vercel.app",
+        "DBURI": "your_mongodb_connection_string",
+        "CLERK_PUBLISHABLE_KEY": "your_clerk_publishable_key",
+        "CLERK_SECRET_KEY": "your_clerk_secret_key",
+        "CLOUDINARY_CLOUD_NAME": "your_cloudinary_name",
+        "CLOUDINARY_API_KEY": "your_cloudinary_api_key",
+        "CLOUDINARY_API_SECRET": "your_cloudinary_api_secret",
+        "NODE_ENV": "production"
+    },
+    "project": {
+        "name": "hotel-booking-backend",
+        "frameworkPreset": "other",
+        "rootDirectory": "SERVER",
+        "installCommand": "npm install"
     }
 }
