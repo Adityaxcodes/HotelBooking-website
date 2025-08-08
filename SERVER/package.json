@@ -2,17 +2,16 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "api/test.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node index.js",
+    "start": "node api/test.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "validate-env": "node -e \"console.log('Validating server environment...'); const requiredVars = ['CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY', 'DBURI']; const missing = requiredVars.filter(v => !process.env[v]); if (missing.length) { console.error('❌ Missing environment variables:', missing.join(', ')); process.exit(1); } const key = process.env.CLERK_PUBLISHABLE_KEY; const isProduction = key.startsWith('pk_live_'); console.log('✅ Environment:', isProduction ? 'Production' : 'Development'); console.log('✅ Database configured'); console.log('✅ Clerk configured'); console.log('Server environment validation complete!');\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@clerk/express": "^1.7.13",
     "cloudinary": "^2.7.0",
