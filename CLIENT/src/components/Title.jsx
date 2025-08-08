@@ -1,7 +1,6 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 
-const Title = ({ title, subTitle, align, font}) => {
+const Title = ({ title, subTitle, align }) => {
   return (
     <div className={`space-y-3 ${align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'}`}>
       <h2 className={`text-4xl md:text-5xl font-bold text-gray-900 font-playfair`}>
