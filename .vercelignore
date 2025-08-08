@@ -1,0 +1,8 @@
+CLIENT/
+SERVER/node_modules/
+SERVER/dist/
+SERVER/.env
+.git/
+.vscode/
+*.log
+node_modules/
