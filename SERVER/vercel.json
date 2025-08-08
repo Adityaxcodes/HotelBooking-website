@@ -3,7 +3,7 @@
   "name": "hotel-booking-api",
   "functions": {
     "api/index.js": {
-      "runtime": "@vercel/node@22.11.0",
+      "runtime": "@vercel/node@18.18.0",
       "maxDuration": 30
     }
   },
