@@ -1,8 +1,0 @@
-# Ignore everything except essential API files
-CLIENT/
-SERVER/
-*
-!index.js
-!vercel.json
-!package.json
-!.nvmrc
