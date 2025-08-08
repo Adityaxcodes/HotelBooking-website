@@ -124,23 +124,33 @@ app.use('*', (req, res) => {
   })
 })
 
+// Initialize services only once
+let initialized = false
+
+const initializeServices = async () => {
+  if (!initialized) {
+    await connectDB()
+    connectCloudinary()
+    initialized = true
+  }
+}
+
 // Serverless function handler for Vercel
 export default async function handler(req, res) {
   try {
-    // Initialize services on cold start
-    if (!isConnected) {
-      await connectDB()
-      connectCloudinary()
-    }
+    // Initialize services
+    await initializeServices()
     
     // Handle the request with Express app
-    return app(req, res)
+    app(req, res)
   } catch (error) {
     console.error('Serverless function error:', error)
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Server initialization failed',
-      error: error.message 
-    })
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server initialization failed',
+        error: error.message 
+      })
+    }
   }
 }
