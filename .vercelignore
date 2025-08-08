@@ -1,14 +1,7 @@
-CLIENT/
-CLIENT/**/*
-SERVER/
-SERVER/**/*
-.git/
-.vscode/
-*.log
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.DS_Store
-.env*
-!.env.example
+# Ignore everything except api folder
+*
+!api/
+!api/**
+!vercel.json
+!package.json
+!.nvmrc
