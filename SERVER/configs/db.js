@@ -2,22 +2,38 @@ import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 dotenv.config()
 
+let isConnected = false
+
 const connectDB = async () => {
+  if (isConnected) {
+    console.log('Using existing MongoDB connection')
+    return
+  }
+
   try {
     // Support both DBURI and MONGO_URI environment variables
     const dbUri = process.env.DBURI || process.env.MONGO_URI;
     if (!dbUri) {
       console.error('Database connection string is not set. Please define DBURI or MONGO_URI.');
-      process.exit(1);
+      throw new Error('Database connection string not found');
     }
-    console.log('Connecting to MongoDB with URI:', dbUri);
-    await mongoose.connect(dbUri, {
-      dbName: 'hotelsInfo' // Changed to match the database with the bookings
-    })
-    console.log('MongoDB connected')
+
+    console.log('Connecting to MongoDB...');
+    
+    const options = {
+      bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    }
+
+    await mongoose.connect(dbUri, options)
+    isConnected = true
+    console.log('MongoDB connected successfully')
   } catch (error) {
     console.error('MongoDB connection error:', error)
-    process.exit(1)
+    isConnected = false
+    throw error
   }
 }
 
