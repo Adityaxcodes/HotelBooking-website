@@ -116,14 +116,24 @@ app.use('*', (req, res) => {
   })
 })
 
-// Main serverless function
-export default async function handler(req, res) {
-  try {
-    // Initialize services
+// Initialize services on first request
+let initialized = false
+
+const initialize = async () => {
+  if (!initialized) {
     await connectDB()
     connectCloudinary()
+    initialized = true
+  }
+}
+
+// Main serverless function handler
+export default async function handler(req, res) {
+  try {
+    // Initialize services on first request
+    await initialize()
     
-    // Handle the request
+    // Handle the request with Express app
     return app(req, res)
   } catch (error) {
     console.error('Serverless function error:', error)

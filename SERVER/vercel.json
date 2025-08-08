@@ -1,8 +1,9 @@
 {
     "version": 2,
     "functions": {
-        "api/*.js": {
-            "runtime": "@vercel/node@22.11.0"
+        "api/index.js": {
+            "runtime": "@vercel/node@22.11.0",
+            "maxDuration": 30
         }
     },
     "routes": [
@@ -10,5 +11,8 @@
             "src": "/(.*)",
             "dest": "/api/index.js"
         }
-    ]
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    }
 }
