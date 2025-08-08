@@ -12,23 +12,31 @@ import hotelRouter from '../routes/hotelRoutes.js'
 import roomRouter from '../routes/roomRoutes.js'
 import bookingRouter from '../routes/bookingRoutes.js'
 
+// Load environment variables
 dotenv.config()
 
+// Create Express app
 const app = express()
 
-// Global connection state for serverless
-let isConnected = false
+// Global flags for serverless optimization
+let dbConnected = false
+let cloudinaryConfigured = false
 
-// Database connection optimized for serverless
+// Database connection for serverless
 const connectDB = async () => {
-  if (isConnected) {
+  if (dbConnected && mongoose.connection.readyState === 1) {
     return
   }
 
   try {
     const dbUri = process.env.DBURI || process.env.MONGO_URI
     if (!dbUri) {
-      throw new Error('Database connection string not found')
+      throw new Error('Database URI not found in environment variables')
+    }
+
+    // Disconnect existing connection if any
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect()
     }
 
     await mongoose.connect(dbUri, {
@@ -36,64 +44,78 @@ const connectDB = async () => {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      family: 4
     })
     
-    isConnected = true
-    console.log('MongoDB connected successfully')
+    dbConnected = true
+    console.log('✅ MongoDB connected for serverless function')
   } catch (error) {
-    console.error('MongoDB connection error:', error)
+    console.error('❌ MongoDB connection error:', error.message)
+    dbConnected = false
     throw error
   }
 }
 
 // Cloudinary configuration
-const connectCloudinary = () => {
+const configureCloudinary = () => {
+  if (cloudinaryConfigured) return
+
   try {
-    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+    const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env
+    
+    if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
       cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
+        cloud_name: CLOUDINARY_CLOUD_NAME,
+        api_key: CLOUDINARY_API_KEY,
+        api_secret: CLOUDINARY_API_SECRET,
       })
-      console.log('Cloudinary configured successfully')
+      cloudinaryConfigured = true
+      console.log('✅ Cloudinary configured')
+    } else {
+      console.log('⚠️ Cloudinary credentials not found')
     }
   } catch (error) {
-    console.error('Cloudinary config error:', error)
+    console.error('❌ Cloudinary config error:', error.message)
   }
 }
 
-// CORS configuration
+// Configure CORS
 app.use(cors({
   origin: [
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://your-frontend-domain.vercel.app'
+    'http://localhost:3000',
+    /\.vercel\.app$/,
+    /\.netlify\.app$/
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-clerk-*']
 }))
 
-// Middleware
+// Body parsing middleware
 app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+// Clerk middleware
 app.use(clerkMiddleware())
 
-// Health check route
+// Health check routes
 app.get('/', (req, res) => {
-  res.json({ 
-    message: "Hotel Booking API is working!", 
+  res.status(200).json({
+    message: "Hotel Booking API is working!",
     status: "success",
     timestamp: new Date().toISOString(),
-    version: "1.0.0"
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || 'development'
   })
 })
 
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    message: "API Health Check", 
+  res.status(200).json({
     status: "healthy",
-    database: isConnected ? "connected" : "disconnected",
+    database: dbConnected ? "connected" : "disconnected",
+    cloudinary: cloudinaryConfigured ? "configured" : "not configured",
     timestamp: new Date().toISOString()
   })
 })
@@ -107,49 +129,51 @@ app.use('/api/bookings', bookingRouter)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('API Error:', err)
-  res.status(500).json({ 
-    success: false, 
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  })
+  console.error('🔥 API Error:', err)
+  
+  if (!res.headersSent) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+      timestamp: new Date().toISOString()
+    })
+  }
 })
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`,
-    availableRoutes: ['/api/user', '/api/hotels', '/api/rooms', '/api/bookings']
-  })
+  if (!res.headersSent) {
+    res.status(404).json({
+      success: false,
+      message: `Route ${req.originalUrl} not found`,
+      availableRoutes: ['/', '/api/health', '/api/user', '/api/hotels', '/api/rooms', '/api/bookings'],
+      timestamp: new Date().toISOString()
+    })
+  }
 })
 
-// Initialize services only once
-let initialized = false
-
-const initializeServices = async () => {
-  if (!initialized) {
-    await connectDB()
-    connectCloudinary()
-    initialized = true
-  }
-}
-
-// Serverless function handler for Vercel
+// Main serverless function handler
 export default async function handler(req, res) {
   try {
-    // Initialize services
-    await initializeServices()
+    console.log(`🚀 ${req.method} ${req.url} - Serverless function invoked`)
     
-    // Handle the request with Express app
+    // Initialize services
+    await connectDB()
+    configureCloudinary()
+    
+    // Handle the request with Express
     app(req, res)
+    
   } catch (error) {
-    console.error('Serverless function error:', error)
+    console.error('💥 Serverless function error:', error)
+    
     if (!res.headersSent) {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Server initialization failed',
-        error: error.message 
+        error: error.message,
+        timestamp: new Date().toISOString()
       })
     }
   }
