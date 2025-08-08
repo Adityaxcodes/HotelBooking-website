@@ -14,5 +14,8 @@
             "src": "/(.*)",
             "dest": "/index.js"
         }
-    ]
+    ],
+    "env": {
+        "VITE_BACKEND_URL": "https://your-server-vercel-url.vercel.app"
+    }
 }
