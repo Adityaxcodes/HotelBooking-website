@@ -2,7 +2,7 @@
   "name": "hotel-booking-api",
   "version": "1.0.0",
   "description": "Hotel Booking API for Vercel - Serverless Functions Only",
-  "main": "api/index.js",
+  "main": "index.js",
   "scripts": {
     "build": "echo 'No build required - API only'",
     "dev": "echo 'Use local development'",
