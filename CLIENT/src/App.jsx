@@ -11,15 +11,24 @@ import Layout from './pages/hotelOwner/Layout.jsx';
 import Dashboard from './pages/hotelOwner/Dashboard.jsx';
 import AddRoom from './pages/hotelOwner/AddRoom.jsx';
 import Listroom from './pages/hotelOwner/Listroom.jsx';
+import { Toaster } from 'react-hot-toast';
+import {useAppContext} from './context/AppContext.jsx'
+import SignInPage from './pages/SignIn.jsx'
+import SignUpPage from './pages/SignUp.jsx'
 
 const App = () => {
   const isOwnerPath = useLocation().pathname.toLowerCase().includes("owner");
+  const {showHotelReg} = useAppContext(); 
 
   return (
     <div>
-      {false && <HotelReg/>}
+      <Toaster/>
+      {showHotelReg && <HotelReg/>}
       {!isOwnerPath && <Navbar />}
   <Routes>
+      {/* Authentication Routes */}
+      <Route path='/sign-in' element={<SignInPage />} />
+      <Route path='/sign-up' element={<SignUpPage />} />
     <Route path='/' element={<Home />} />
     <Route path='/rooms' element={<AllRooms/>}/>
     <Route path='/rooms/:id' element={<RoomDetails/>} />

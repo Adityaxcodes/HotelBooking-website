@@ -7,7 +7,7 @@ const Testimonials = () => {
   const totalStars = 5; // Total number of stars to display
 
   return (
-    <div className="container mx-auto px-10 py-16">
+    <div id="testimonials" className="container mx-auto px-10 py-16">
       <Title 
         title="What Our Guests Say" 
         subTitle="Guest Reviews"

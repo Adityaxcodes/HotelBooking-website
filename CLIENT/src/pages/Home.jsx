@@ -6,14 +6,14 @@ import NewsLetter from '../components/NewsLetter.jsx';
 
 const Home = () => {
   return (
-    <>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
       <Hero />
-      <FeaturedDestination/>
+      <FeaturedDestination />
       <ExclusiveOffers />
       <Testimonials />
-      <NewsLetter/>
-    </>
+      <NewsLetter />
+    </div>
   );
 } 
 
-export default Home 
+export default Home

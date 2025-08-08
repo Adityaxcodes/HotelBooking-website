@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { roomsDummyData, assets, roomCommonData } from '../assets/assets'
+import { assets, roomCommonData } from '../assets/assets'
+// Use axios instance from context for baseURL
+import toast from 'react-hot-toast'
+// axios instance uses defaults.baseURL set in AppContext
+import axios from 'axios'
+import { useAuth } from '@clerk/clerk-react'
 
 const RoomDetails = () => {
   const { id } = useParams()
@@ -8,18 +13,75 @@ const RoomDetails = () => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [room, setRoom] = useState(null)
   const [loading, setLoading] = useState(true)
+  // Booking form state
+  const { getToken } = useAuth()
+  const today = new Date().toISOString().split('T')[0]
+  const tomorrow = new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0]
+  const [checkInDate, setCheckInDate] = useState(today)
+  const [checkOutDate, setCheckOutDate] = useState(tomorrow)
+  const [guestsCount, setGuestsCount] = useState(1)
+  const [specialRequest, setSpecialRequest] = useState('')
+  const [extras, setExtras] = useState({ breakfast: false, transfer: false, spa: false })
 
   useEffect(() => {
-    // Find the room by ID
-    const foundRoom = roomsDummyData.find(room => room._id === id)
-    if (foundRoom) {
-      setRoom(foundRoom)
-    } else {
-      // If room not found, redirect to rooms page
-      navigate('/rooms')
+    const fetchRoom = async () => {
+      setLoading(true)
+      try {
+        // Fetch all rooms and find the specific one
+        const { data } = await axios.get('/api/rooms')
+        
+        if (data.success) {
+          const foundRoom = data.rooms.find(room => room._id === id)
+          
+          if (foundRoom) {
+            setRoom(foundRoom)
+          } else {
+            toast.error('Room not found')
+            navigate('/rooms')
+          }
+        } else {
+          toast.error(data.message)
+          navigate('/rooms')
+        }
+      } catch (err) {
+        toast.error(err.message || 'Failed to fetch room details')
+        navigate('/rooms')
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)
+    fetchRoom()
   }, [id, navigate])
+
+  // Calculate pricing
+  const calculateNights = () => {
+    const diff = new Date(checkOutDate) - new Date(checkInDate)
+    return diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0
+  }
+  const nights = calculateNights()
+  const extrasCost = (extras.breakfast ? 25 * nights : 0) + (extras.transfer ? 45 : 0) + (extras.spa ? 30 * nights : 0)
+  const subtotal = room ? room.pricePerNight * nights + extrasCost : 0
+  const taxes = Math.round(subtotal * 0.12)
+  const totalPrice = subtotal + taxes
+  // Handle booking submission
+  const handleBooking = async () => {
+    if (nights <= 0) return toast.error('Check-out date must be after check-in date')
+    if (!room?.isAvailable) return
+    try {
+      const token = await getToken()
+      const bookingData = { room: room._id, hotel: room.hotel._id, checkInDate, checkOutDate, guests: guestsCount, specialRequests: specialRequest, extras, totalPrice }
+      const { data } = await axios.post('/api/bookings/book', bookingData, { headers: { Authorization: `Bearer ${token}` } })
+      if (data.success) {
+        toast.success('Booking successful!')
+        navigate('/mybookings')
+      } else {
+        toast.error(data.message)
+      }
+    } catch (err) {
+      toast.error(err.message || 'Booking failed')
+    }
+  }
+
 
   // Function to get icon for amenity
   const getAmenityIcon = (amenity) => {
@@ -309,55 +371,52 @@ const RoomDetails = () => {
         {/* Booking Form Section */}
         <div className="bg-white rounded-3xl shadow-xl p-8 mb-8 border border-gray-100">
           <h2 className="text-3xl font-bold text-gray-900 mb-6 font-playfair">Book Your Stay</h2>
-          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Booking Form */}
             <div className="lg:col-span-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {/* Check-in Date */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Check-in Date
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Check-in Date</label>
                   <input
                     type="date"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                    min={new Date().toISOString().split('T')[0]}
+                    min={checkInDate}
+                    value={checkInDate}
+                    onChange={e => setCheckInDate(e.target.value)}
                   />
                 </div>
-
                 {/* Check-out Date */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Check-out Date
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Check-out Date</label>
                   <input
                     type="date"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                    min={new Date().toISOString().split('T')[0]}
+                    min={checkInDate}
+                    value={checkOutDate}
+                    onChange={e => setCheckOutDate(e.target.value)}
                   />
                 </div>
-
-                {/* Number of Guests */}
+                {/* Guests */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Guests
-                  </label>
-                  <select className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
-                    <option value="1">1 Guest</option>
-                    <option value="2">2 Guests</option>
-                    <option value="3">3 Guests</option>
-                    <option value="4">4 Guests</option>
-                    <option value="5">5+ Guests</option>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Guests</label>
+                  <select
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    value={guestsCount}
+                    onChange={e => setGuestsCount(Number(e.target.value))}
+                  >
+                    {[1,2,3,4].map(n => <option key={n} value={n}>{n} Guest{n>1?'s':''}</option>)}
+                    <option value={5}>5+ Guests</option>
                   </select>
                 </div>
-
                 {/* Special Requests */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Special Requests
-                  </label>
-                  <select className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Special Requests</label>
+                  <select
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    value={specialRequest}
+                    onChange={e => setSpecialRequest(e.target.value)}
+                  >
                     <option value="">None</option>
                     <option value="early-checkin">Early Check-in</option>
                     <option value="late-checkout">Late Check-out</option>
@@ -367,71 +426,59 @@ const RoomDetails = () => {
                   </select>
                 </div>
               </div>
-
               {/* Additional Options */}
               <div className="space-y-3 mb-6">
                 <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  <input
+                    type="checkbox"
+                    checked={extras.breakfast}
+                    onChange={e => setExtras(prev => ({ ...prev, breakfast: e.target.checked }))
+                    }
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
                   <span className="ml-3 text-gray-700">Add breakfast (+$25/night)</span>
                 </label>
                 <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  <input
+                    type="checkbox"
+                    checked={extras.transfer}
+                    onChange={e => setExtras(prev => ({ ...prev, transfer: e.target.checked }))
+                    }
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
                   <span className="ml-3 text-gray-700">Airport transfer (+$45)</span>
                 </label>
                 <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  <input
+                    type="checkbox"
+                    checked={extras.spa}
+                    onChange={e => setExtras(prev => ({ ...prev, spa: e.target.checked }))
+                    }
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
                   <span className="ml-3 text-gray-700">Spa access (+$30/day)</span>
                 </label>
               </div>
             </div>
-
             {/* Booking Summary */}
             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-100">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Booking Summary</h3>
-              
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Room Type</span>
-                  <span className="font-semibold text-gray-900">{room.roomType}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Price per night</span>
-                  <span className="font-semibold text-gray-900">${room.pricePerNight}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Nights</span>
-                  <span className="font-semibold text-gray-900">1</span>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-gray-600">Room Type</span><span className="font-semibold text-gray-900">{room.roomType}</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-600">Price per night</span><span className="font-semibold text-gray-900">${room.pricePerNight}</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-600">Nights</span><span className="font-semibold text-gray-900">{nights}</span></div>
                 <hr className="border-gray-300" />
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold text-gray-900">${room.pricePerNight}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Taxes & Fees</span>
-                  <span className="font-semibold text-gray-900">${Math.round(room.pricePerNight * 0.12)}</span>
-                </div>
+                <div className="flex justify-between items-center"><span className="text-gray-600">Subtotal</span><span className="font-semibold text-gray-900">${subtotal}</span></div>
+                <div className="flex justify-between items-center"><span className="text-gray-600">Taxes & Fees</span><span className="font-semibold text-gray-900">${taxes}</span></div>
                 <hr className="border-gray-300" />
-                <div className="flex justify-between items-center text-lg">
-                  <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-bold text-indigo-600">${room.pricePerNight + Math.round(room.pricePerNight * 0.12)}</span>
-                </div>
+                <div className="flex justify-between items-center text-lg"><span className="font-bold text-gray-900">Total</span><span className="font-bold text-indigo-600">${totalPrice}</span></div>
               </div>
-
-              <button 
-                className={`w-full py-3 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${
-                  room.isAvailable
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-                disabled={!room.isAvailable}
-              >
-                {room.isAvailable ? 'Book Now' : 'Unavailable'}
-              </button>
-
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                Free cancellation until 24 hours before check-in
-              </p>
+              <button
+                onClick={handleBooking}
+                disabled={!room.isAvailable || nights <= 0}
+                className={`w-full py-3 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${room.isAvailable ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              >{room.isAvailable && nights>0 ? 'Book Now' : 'Unavailable'}</button>
+              <p className="text-xs text-gray-500 mt-3 text-center">Free cancellation until 24 hours before check-in</p>
             </div>
           </div>
         </div>

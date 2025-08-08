@@ -1,13 +1,12 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom';
 import HotelCard from './HotelCard';
 import Title from './Title';
-import { roomsDummyData } from '../assets/assets.js';
+import { useAppContext } from '../context/AppContext.jsx';
 
 const FeaturedDestination = () => {
-  const navigate = useNavigate();
+  const{navigate, rooms} = useAppContext()
 
-  return (
+  return rooms.length >0 && (
     <div className="container mx-auto px-10 py-16">
       <Title 
         title="Featured Destinations" 
@@ -15,9 +14,10 @@ const FeaturedDestination = () => {
         align="center"
         font="playfair"
       />
-      <div className="flex justify-center items-center mt-10">
-        <div className="flex gap-6 pb-4">
-          {roomsDummyData.map((room, index) => (
+      {/* Horizontally scrollable destinations */}
+      <div className="relative mt-10 overflow-x-auto w-full">
+        <div className="flex gap-6 pb-4 w-max mx-auto">
+          {rooms.map((room, index) => (
             <div className="min-w-[300px] flex-shrink-0" key={room._id}>
               <HotelCard room={room} index={index} />
             </div>

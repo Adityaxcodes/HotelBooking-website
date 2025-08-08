@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { roomsDummyData, assets } from '../assets/assets'
+import { assets } from '../assets/assets'
+import { useAppContext } from '../context/AppContext'
 
 const AllRooms = () => {
+  const { publicRooms, fetchPublicRooms } = useAppContext();
   const [selectedImageIndex, setSelectedImageIndex] = useState({})
   const [filters, setFilters] = useState({
     roomType: '',
@@ -10,6 +12,7 @@ const AllRooms = () => {
     amenities: [],
     availability: ''
   })
+  useEffect(() => { fetchPublicRooms() }, [fetchPublicRooms])
 
   const handleImageSelect = (roomId, imageIndex) => {
     setSelectedImageIndex(prev => ({
@@ -53,7 +56,7 @@ const AllRooms = () => {
   }
 
   // Filter room data
-  const filteredRooms = roomsDummyData.filter(room => {
+  const filteredRooms = publicRooms.filter(room => {
     // Room type filter
     if (filters.roomType && room.roomType !== filters.roomType) {
       return false
@@ -84,7 +87,7 @@ const AllRooms = () => {
   })
 
   // Get unique amenities for filter options
-  const allAmenities = [...new Set(roomsDummyData.flatMap(room => room.amenities))]
+  const allAmenities = [...new Set(publicRooms.flatMap(room => room.amenities))]
 
   // Function to get icon for amenity
   const getAmenityIcon = (amenity) => {
@@ -264,30 +267,27 @@ const AllRooms = () => {
                                 </p>
                               </div>
                               <div className="flex gap-3">
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
                                     // Handle quick booking without navigation
                                   }}
-                                  className={`px-6 py-2 rounded-full font-semibold text-sm transition-all duration-300 transform hover:scale-105 shadow-lg ${
-                                    room.isAvailable
-                                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-xl'
-                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                  }`}
                                   disabled={!room.isAvailable}
+                                  className="px-4 py-2 rounded border border-gray-400 font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors"
                                 >
                                   {room.isAvailable ? 'Quick Book' : 'Unavailable'}
                                 </button>
-                                {/* Pay Now button for unavailable (unpaid) rooms */}
                                 {!room.isAvailable && (
                                   <button
-                                    className="px-6 py-2 rounded-full font-semibold text-sm bg-green-600 text-white hover:bg-green-700 transition-all duration-300"
+                                    className="px-4 py-2 rounded border border-gray-400 font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors"
                                   >
                                     Pay Now
                                   </button>
                                 )}
-                                <span className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                                <span
+                                  className="px-4 py-2 rounded border border-gray-400 font-medium text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+                                >
                                   View Details →
                                 </span>
                               </div>

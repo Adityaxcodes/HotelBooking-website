@@ -1,21 +1,86 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { userBookingsDummyData, assets } from '../assets/assets'
+// Removed unused assets import
+import axios from 'axios'
+import { useAuth } from '@clerk/clerk-react'
+import toast from 'react-hot-toast'
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState([])
   const [filteredBookings, setFilteredBookings] = useState([])
   const [activeFilter, setActiveFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  const { getToken } = useAuth()
 
+  // Cancel booking function
+  const cancelBooking = async (bookingId) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.');
+      if (!confirmed) return;
+
+      const token = await getToken();
+      console.log('Cancelling booking:', bookingId);
+      
+      const { data } = await axios.patch(`/api/bookings/cancel/${bookingId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (data.success) {
+        toast.success('Booking cancelled successfully');
+        // Update the local booking state
+        setBookings(prevBookings => 
+          prevBookings.map(booking => 
+            booking._id === bookingId 
+              ? { ...booking, status: 'cancelled' }
+              : booking
+          )
+        );
+        setFilteredBookings(prevBookings => 
+          prevBookings.map(booking => 
+            booking._id === bookingId 
+              ? { ...booking, status: 'cancelled' }
+              : booking
+          )
+        );
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      console.error('Cancel booking error:', err);
+      toast.error(err.response?.data?.message || 'Failed to cancel booking');
+    }
+  };
+
+  // fetch user bookings once on mount
   useEffect(() => {
-    // Simulate API call to fetch user bookings
-    setTimeout(() => {
-      setBookings(userBookingsDummyData)
-      setFilteredBookings(userBookingsDummyData)
-      setLoading(false)
-    }, 1000)
-  }, [])
+    const fetchBookings = async () => {
+      setLoading(true)
+      try {
+        const token = await getToken()
+        console.log('Fetching bookings with token:', token ? 'Token available' : 'No token');
+        
+        const { data } = await axios.get('/api/bookings/user', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        console.log('Bookings API response:', data);
+
+        if (data.success) {
+          console.log('Setting bookings:', data.bookings);
+          setBookings(data.bookings)
+          setFilteredBookings(data.bookings)
+        } else {
+          toast.error(data.message)
+        }
+      } catch (err) {
+        console.error('Fetch bookings error:', err);
+        toast.error(err.message || 'Failed to fetch bookings')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchBookings()
+  }, [getToken])
 
   // Filter bookings based on status
   const handleFilterChange = (filter) => {
@@ -324,7 +389,10 @@ const MyBookings = () => {
                           )}
                           
                           {booking.status === 'pending' && (
-                            <button className="block w-full px-6 py-3 border-2 border-gray-300 text-gray-700 text-center font-semibold rounded-full hover:bg-gray-50 transition-colors duration-300">
+                            <button 
+                              onClick={() => cancelBooking(booking._id)}
+                              className="block w-full px-6 py-3 border-2 border-red-300 text-red-700 text-center font-semibold rounded-full hover:bg-red-50 transition-colors duration-300"
+                            >
                               Cancel Booking
                             </button>
                           )}
