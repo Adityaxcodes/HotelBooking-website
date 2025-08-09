@@ -19,7 +19,20 @@ console.log('DBURI:', process.env.DBURI)
 const PORT = process.env.PORT || 3000
 
 const app = express()
-app.use(cors())
+
+// CORS configuration to allow Vercel frontend
+const corsOptions = {
+  origin: [
+    'http://localhost:5173', // Local development
+    'https://hotel-booking-website-eight-swart.vercel.app', // Your Vercel deployment
+    'https://quickstay.com' // Custom domain if needed
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with']
+}
+
+app.use(cors(corsOptions))
 
 // Middleware 
 app.use(express.json())
